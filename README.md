@@ -1,79 +1,75 @@
 # PCT-SCAN-ROS2
 
-PCT-SCAN-ROS2 将 PCT 的跨层全局规划器与 SCAN 的局部轨迹规划器几何，用 ROS 2 Humble 运行。PCT 负责在 tomogram 层析图中选择楼层、楼梯和坡道，SCAN 沿全局路线持续生成局部 B-spline。RViz 同时显示点云、路线和 Go2 运动动画。
+PCT-SCAN-ROS2 runs PCT's multi-floor global planner together with SCAN's local trajectory planner on ROS 2 Humble. PCT chooses floors, stairs, and ramps in a tomogram. SCAN keeps generating a local B-spline along that global route. RViz shows the point cloud, the route, and the Go2 motion at the same time.
 
-本仓库仅用于验证PCT+SCAN导航算法，起点和终点由 RViz Interactive Marker 控制，Z 轴可以直接选择目标楼层。
+This repository is only for checking the PCT+SCAN navigation stack. Start and goal come from RViz interactive markers, and the Z axis selects the target floor directly.
 
 <p align="center">
-  <img src="assets/images/building.png" alt="PCT-SCAN-ROS2 Building 跨层导航效果" width="92%">
+  <img src="assets/images/building.png" alt="PCT-SCAN-ROS2 Building multi-floor navigation" width="92%">
 </p>
 
-<p align="center"><em>Building：PCT 跨层全局路线与 SCAN 四足局部轨迹跟踪</em></p>
+<p align="center"><em>Building: PCT multi-floor global route and SCAN quadruped local tracking</em></p>
 
-## 系统架构
+## System architecture
 
 ```mermaid
 flowchart LR
-  PCD[PCD 点云] --> TOMO[PCT tomogram]
-  TOMO --> ASTAR[PCT 多层 A*]
+  PCD[PCD point cloud] --> TOMO[PCT tomogram]
+  TOMO --> ASTAR[PCT multi-layer A*]
   ASTAR -->|/pct_path| SCAN[SCAN Mode 3]
-  SCAN --> BS[局部 B-spline]
-  BS --> GO2[Go2 RViz 动画]
+  SCAN --> BS[local B-spline]
+  BS --> GO2[Go2 RViz animation]
 ```
 
-PCT 提供跨楼层的全局拓扑与路线约束；SCAN 保留其滑动地图、碰撞建模、A\* 引导和
-轨迹优化能力，在全局路线的局部窗口内持续重规划。本工程通过 `/pct_path` 将 PCT
-的全局结果接入 SCAN Mode 3。
+PCT supplies the multi-floor topology and the route constraint. SCAN keeps its sliding map, collision model, A\* guidance, and trajectory optimization, and it replans inside a local window of the global route. This project feeds PCT's global result into SCAN Mode 3 through `/pct_path`.
 
-## 已验证场景
+## Verified scenes
 
-| 场景     |                   默认路线 | 验证结果                        | 启动命令                                |
-| -------- | -------------------------: | ------------------------------- | --------------------------------------- |
-| Building |   地面至上层，约 14 m 高差 | PCT 跨层 A\* + SCAN 连续跟踪    | `./scripts/launch_pct_scan_building.sh` |
-| Plaza    |                    37.12 m | PCT A\*；SCAN 进入持续重规划    | `./scripts/launch_pct_scan_plaza.sh`    |
-| Spiral   | 38.30 m、3.80 m 爬升、2 层 | PCT A\*；SCAN 连续 5 个以上窗口 | `./scripts/launch_pct_scan_spiral.sh`   |
+| Scene    |                    Default route | Result                                      | Launch command                          |
+| -------- | -------------------------------: | ------------------------------------------- | --------------------------------------- |
+| Building | ground to upper floor, ~14 m rise | PCT multi-floor A\* + continuous SCAN tracking | `./scripts/launch_pct_scan_building.sh` |
+| Plaza    |                          37.12 m | PCT A\*; SCAN enters continuous replanning | `./scripts/launch_pct_scan_plaza.sh`    |
+| Spiral   |   38.30 m, 3.80 m climb, 2 floors | PCT A\*; SCAN runs more than 5 windows     | `./scripts/launch_pct_scan_spiral.sh`   |
 
-### Plaza 与 Spiral
+### Plaza and Spiral
 
 <table>
   <tr>
     <td width="50%" align="center">
-      <img src="assets/images/plaza.png" alt="Plaza PCT-SCAN 导航效果" width="100%"><br>
-      <strong>Plaza</strong>：平面复杂障碍场景
+      <img src="assets/images/plaza.png" alt="Plaza PCT-SCAN navigation" width="100%"><br>
+      <strong>Plaza</strong>: planar scene with complex obstacles
     </td>
     <td width="50%" align="center">
-      <img src="assets/images/spiral.png" alt="Spiral PCT-SCAN 跨层导航效果" width="100%"><br>
-      <strong>Spiral</strong>：螺旋坡道跨层场景
+      <img src="assets/images/spiral.png" alt="Spiral PCT-SCAN multi-floor navigation" width="100%"><br>
+      <strong>Spiral</strong>: spiral-ramp multi-floor scene
     </td>
   </tr>
 </table>
 
-## 环境要求
+## Requirements
 
-当前代码针对下面这套环境整理：
+The current code is set up for this environment:
 
 - Ubuntu 22.04
 - ROS 2 Humble
 - Python 3.10
-- GCC 11 或兼容的 C++17 编译器
+- GCC 11, or another C++17 compiler
 - RViz2
 
-Building 和 Plaza 不需要 CUDA。Spiral 的 tomogram 生成器会先检查 CUDA，GPU 不可用
-时改用 NumPy 和 SciPy。运行导航演示本身不需要 NVIDIA 显卡。
+Building and Plaza do not need CUDA. The Spiral tomogram generator checks for CUDA first and falls back to NumPy and SciPy when no GPU is available. The navigation demo itself does not need an NVIDIA GPU.
 
-## 安装与环境部署
+## Install
 
-### 1. 获取代码
+### 1. Get the code
 
 ```bash
 git clone https://github.com/yagami-light7/PCT-SCAN-ROS2.git
 cd PCT-SCAN-ROS2
 ```
 
-如果系统还没有 ROS 2 Humble，请先按照 ROS 2 官方文档完成桌面版安装。下面的命令
-默认 `/opt/ros/humble/setup.bash` 已经存在。
+If ROS 2 Humble is not installed yet, install the desktop variant from the official ROS 2 documentation first. The commands below assume `/opt/ros/humble/setup.bash` already exists.
 
-### 2. 安装 ROS 和系统依赖
+### 2. Install ROS and system dependencies
 
 ```bash
 sudo apt update
@@ -85,57 +81,52 @@ sudo apt install -y \
   libgl1-mesa-dev libglu1-mesa-dev
 ```
 
-第一次使用 rosdep 时先执行：
+On the first use of rosdep, run:
 
 ```bash
 sudo rosdep init
 rosdep update
 ```
 
-如果 `rosdep init` 提示配置已经存在，直接执行 `rosdep update`。随后安装工作空间内
-各 ROS package 声明的依赖：
+If `rosdep init` says the configuration already exists, run `rosdep update` only. Then install the dependencies declared by the ROS packages in this workspace:
 
 ```bash
 source /opt/ros/humble/setup.bash
 rosdep install --from-paths src --ignore-src -r -y
 ```
 
-### 3. 编译 PCT 原生依赖
+### 3. Build PCT's native dependencies
 
-PCT 使用 GTSAM 4.2 和 OSQP 1.0。仓库脚本会下载源码并安装到 `.deps/install`，不会
-改动 `/usr/local`，也不需要再 source 另一个 PCT 工作空间。
+PCT uses GTSAM 4.2 and OSQP 1.0. The repository script downloads the sources and installs them under `.deps/install`. It does not change `/usr/local`, and you do not need to source another PCT workspace.
 
 ```bash
 ./scripts/setup_pct_dependencies.sh
 ```
 
-脚本默认使用两个编译任务。内存充足时可以提高并行数：
+The script uses two build jobs by default. Raise the parallelism when you have enough memory:
 
 ```bash
 PCT_BUILD_JOBS=6 ./scripts/setup_pct_dependencies.sh
 ```
 
-### 4. 构建工作空间
+### 4. Build the workspace
 
 ```bash
 ./scripts/build_workspace.sh
 source install/setup.bash
 ```
 
-启动脚本会自行加载 ROS、当前工作空间和 `.deps` 中的运行库，所以平时可以直接执行
-脚本。上面的 `setup.bash` 用于 bash；zsh 用户手动配置当前终端时改用
-`source install/setup.zsh`。两种 shell 都应该运行 `./scripts/launch_*.sh`，不要
-source 这些启动脚本。
+The launch scripts load ROS, this workspace, and the runtime libraries in `.deps` themselves, so you can run them directly. The `setup.bash` above is for bash. For zsh, source `install/setup.zsh` when you configure the current terminal by hand. Either shell should run `./scripts/launch_*.sh`. Do not source those launch scripts.
 
-已有 GTSAM 和 OSQP 安装时，可以指定依赖目录：
+If GTSAM and OSQP are already installed, point the build at that directory:
 
 ```bash
 PCT_DEPS_ROOT=/path/to/deps ./scripts/build_workspace.sh
 ```
 
-### 5. 检查安装
+### 5. Check the install
 
-先确认 ROS 能找到两个核心包：
+First confirm that ROS can find the two core packages:
 
 ```bash
 source /opt/ros/humble/setup.bash
@@ -144,29 +135,28 @@ ros2 pkg prefix pct_scan_bridge
 ros2 pkg prefix scan_planner
 ```
 
-再运行不带图形界面的路线测试：
+Then run the headless route tests:
 
 ```bash
 ./scripts/test_pct_building_astar.sh --force
 ./scripts/test_pct_plaza_astar.sh --force
 ```
 
-两条命令都打印 `[astar] PASS` 才说明 PCT 原生库、pickle 和 Python bridge 已经连通。
+Both commands must print `[astar] PASS`. That means the PCT native library, the pickle, and the Python bridge are connected.
 
-## 快速启动
+## Quick start
 
 ### Building
 
-Building 的资产随仓库提供，适合第一次启动：
+The Building assets ship with the repository and are the best first launch:
 
 ```bash
 ./scripts/launch_pct_scan_building.sh
 ```
 
-RViz 打开后，选择工具栏中的 `Interact`。拖动绿色 Start 和红色 Goal，跨层时还要
-沿蓝色 Z 轴把 Goal 放到目标楼层。右键任一 marker，选择 `Plan route`。
+After RViz opens, select `Interact` in the toolbar. Drag the green Start and the red Goal. For another floor, move the Goal along the blue Z axis onto that floor. Right-click either marker and choose `Plan route`.
 
-如果只想播放仓库内的默认跨层路线：
+To play the default multi-floor route stored in the repository:
 
 ```bash
 ./scripts/launch_pct_scan_building.sh plan_on_startup:=true
@@ -178,7 +168,7 @@ RViz 打开后，选择工具栏中的 `Interact`。拖动绿色 Start 和红色
 ./scripts/launch_pct_scan_plaza.sh
 ```
 
-自动规划默认路线：
+Plan the default route automatically:
 
 ```bash
 ./scripts/launch_pct_scan_plaza.sh plan_on_startup:=true
@@ -186,8 +176,7 @@ RViz 打开后，选择工具栏中的 `Interact`。拖动绿色 Start 和红色
 
 ### Spiral
 
-Spiral 源仓库没有明确的资产许可证，因此 PCD 和生成后的 pickle 不随 Git 分发。
-第一次使用时运行：
+The Spiral source repository does not state a clear asset license, so the PCD and the generated pickle are not distributed in Git. On the first use, run:
 
 ```bash
 ./scripts/fetch_spiral_asset.sh
@@ -196,13 +185,13 @@ Spiral 源仓库没有明确的资产许可证，因此 PCD 和生成后的 pick
 ./scripts/test_pct_spiral_astar.sh --force
 ```
 
-测试通过后启动：
+After the test passes, launch:
 
 ```bash
 ./scripts/launch_pct_scan_spiral.sh
 ```
 
-三个场景都可以关闭 RViz 做终端验收：
+All three scenes can be checked from the terminal with RViz closed:
 
 ```bash
 ./scripts/launch_pct_scan_building.sh \
@@ -210,59 +199,44 @@ Spiral 源仓库没有明确的资产许可证，因此 PCD 和生成后的 pick
   publish_tomogram:=false enable_interactive_markers:=false
 ```
 
-终端应先看到 PCT 发布 `/pct_path`，然后看到 SCAN 接受参考路线，并持续打印
-`Received trajectory N`。如果只出现第一条局部轨迹，检查是否残留了从其他工作空间
-启动的同名节点。
+The terminal should first show PCT publishing `/pct_path`, then SCAN accepting the reference route and printing `Received trajectory N` continuously. If only the first local trajectory appears, check for a leftover node of the same name started from another workspace.
 
-视频模式默认设置 `enable_local_sensing:=false`。PCD 仍用于场景显示，PCT tomogram
-负责地形可通行性。这样可以避免稠密楼梯点云被 SCAN 的碰撞膨胀当成封闭障碍。
+Video mode sets `enable_local_sensing:=false` by default. The PCD is still shown as the scene, and the PCT tomogram decides terrain traversability. That keeps SCAN's collision inflation from treating the dense stair cloud as a closed obstacle.
 
-## 场景数据
+## Scene data
 
-Building 和 Plaza 来自 PCT 官方资源，仓库直接保存运行演示所需的 PCD 与 pickle。
-Spiral 来自 3D2M planner。由于源仓库没有明确的资产许可证，Git 只保存下载和生成
-脚本。三个场景的来源、参数和文件校验值分别记录在 `assets/<scene>/README.md`。
+Building and Plaza come from the official PCT assets. This repository stores the PCD and pickle files needed to run the demos. Spiral comes from the 3D2M planner. Because that source repository does not state a clear asset license, Git stores only the download and generation scripts. Sources, parameters, and file checksums for the three scenes are recorded in `assets/<scene>/README.md`.
 
-## 工程结构
+## Layout
 
 ```text
 PCT-SCAN-ROS2/
-├── src/pct/                         # 可构建的 PCT/tomography 源码
-├── src/integration/pct_scan_bridge/ # PCT → SCAN ROS 2 桥
+├── src/pct/                         # buildable PCT/tomography sources
+├── src/integration/pct_scan_bridge/ # PCT → SCAN ROS 2 bridge
 ├── src/planner/                     # SCAN planner
-├── src/simulator/                   # Go2 RViz 动画及原 SCAN 工具
-├── assets/                          # 场景、tomogram、验收路线与来源说明
-├── scripts/                         # 依赖、生成、测试和启动入口
-├── docs/                            # 分阶段教程
-├── LICENSES/                        # 上游许可证全文
-└── NOTICE                           # 来源与修改声明
+├── src/simulator/                   # Go2 RViz animation and original SCAN tools
+├── assets/                          # scenes, tomograms, check routes, and source notes
+├── scripts/                         # dependency, generation, test, and launch entry points
+├── docs/                            # staged tutorials
+├── LICENSES/                        # full upstream license texts
+└── NOTICE                           # provenance and modification statement
 ```
 
-核心接口：PCT 发布 `/pct_path` (`nav_msgs/Path`)；SCAN Mode 3 订阅后进行三维 RDP
-简化和分段线性参考参数化，再发布 `planning/bspline`。分段线性参考用于守住楼梯和
-窄通道的全局走廊，平滑只由局部 B-spline 完成。
+Core interface: PCT publishes `/pct_path` (`nav_msgs/Path`). SCAN Mode 3 subscribes, simplifies it with 3D RDP, builds a piecewise-linear reference, and publishes `planning/bspline`. The piecewise-linear reference holds the global corridor through stairs and narrow passages. Smoothing is done only by the local B-spline.
 
-更完整的原理和调试过程见：
+A fuller account of the design and the debugging process is in:
 
 - `docs/tutorial_phase4_pct_scan_bridge.md`
 - `docs/tutorial_phase5_route_tracking.md`
 - `docs/tutorial_phase7_building_rviz.md`
 
-## 来源与许可证
+## Sources and licenses
 
-- SCAN-Planner：<https://github.com/wuyi2121/SCAN-Planner>，Apache-2.0。
-- PCT planner：<https://github.com/byangw/PCT_planner>，其 NOTICE 明确为 GPL v2
-  或后续版本。
-- PCT ROS 2 移植来源：<https://github.com/2473o/PCT_planner/tree/feat/ros2pkg>。
-- Spiral/3D2M：<https://github.com/ZJU-FAST-Lab/3D2M-planner>，当前未发现明确
-  许可证，因此不随 Git 分发其资产。
+- SCAN-Planner: <https://github.com/wuyi2121/SCAN-Planner>, Apache-2.0.
+- PCT planner: <https://github.com/byangw/PCT_planner>. Its NOTICE states GPL v2 or later.
+- PCT ROS 2 port: <https://github.com/2473o/PCT_planner/tree/feat/ros2pkg>.
+- Spiral/3D2M: <https://github.com/ZJU-FAST-Lab/3D2M-planner>. No clear license was found, so its assets are not distributed in Git.
 
-本仓库不是一个可以用单一 Apache-2.0 覆盖所有文件的工程。SCAN 包继续使用
-Apache-2.0；PCT、tomography 和直接派生的 bridge 使用 GPL-2.0-or-later；其他
-ROS 包保留各自 package.xml 声明的 GPL-3.0-only 或 BSD-3-Clause。完整映射见
-[`LICENSE`](LICENSE)、[`NOTICE`](NOTICE)、
-[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)、`src/pct/NOTICE` 和
-`LICENSES/`。
+This repository is not a project that a single Apache-2.0 license can cover. The SCAN packages stay Apache-2.0. PCT, tomography, and the bridge derived directly from them use GPL-2.0-or-later. The other ROS packages keep the GPL-3.0-only or BSD-3-Clause license declared in their own `package.xml`. The full map is in [`LICENSE`](LICENSE), [`NOTICE`](NOTICE), [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md), `src/pct/NOTICE`, and `LICENSES/`.
 
-这是一份工程侧许可证审计，不构成法律意见。公开发布或商业使用前应再次核对每个
-第三方 asset 与依赖的授权条件。
+This is an engineering license audit, not legal advice. Before a public release or commercial use, check the license terms of every third-party asset and dependency again.

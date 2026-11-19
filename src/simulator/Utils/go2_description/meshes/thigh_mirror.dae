@@ -11,7 +11,7 @@
     <up_axis>Z_UP</up_axis>
   </asset>
   <library_effects>
-    <effect id="深色橡胶_012-effect">
+    <effect id="dark rubber_012-effect">
       <profile_COMMON>
         <technique sid="common">
           <lambert>
@@ -48,8 +48,8 @@
   </library_effects>
   <library_images/>
   <library_materials>
-    <material id="深色橡胶_012-material" name="深色橡胶.012">
-      <instance_effect url="#深色橡胶_012-effect"/>
+    <material id="dark rubber_012-material" name="dark rubber.012">
+      <instance_effect url="#dark rubber_012-effect"/>
     </material>
     <material id="Material_011-material" name="Material.011">
       <instance_effect url="#Material_011-effect"/>
@@ -90,7 +90,7 @@
         <vertices id="thigh_003-mesh-vertices">
           <input semantic="POSITION" source="#thigh_003-mesh-positions"/>
         </vertices>
-        <triangles material="深色橡胶_012-material" count="11708">
+        <triangles material="dark rubber_012-material" count="11708">
           <input semantic="VERTEX" source="#thigh_003-mesh-vertices" offset="0"/>
           <input semantic="NORMAL" source="#thigh_003-mesh-normals" offset="1"/>
           <input semantic="TEXCOORD" source="#thigh_003-mesh-map-0" offset="2" set="0"/>
@@ -112,7 +112,7 @@
         <instance_geometry url="#thigh_003-mesh" name="thigh.FR0815">
           <bind_material>
             <technique_common>
-              <instance_material symbol="深色橡胶_012-material" target="#深色橡胶_012-material">
+              <instance_material symbol="dark rubber_012-material" target="#dark rubber_012-material">
                 <bind_vertex_input semantic="UVMap" input_semantic="TEXCOORD" input_set="0"/>
               </instance_material>
               <instance_material symbol="Material_011-material" target="#Material_011-material">

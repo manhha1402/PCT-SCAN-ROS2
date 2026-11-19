@@ -1,71 +1,59 @@
-# 第五阶段：让 SCAN 严格沿 PCT 路线连续上楼
+# Phase 5: Make SCAN follow the PCT route up the stairs
 
-## 1. 现象不是一个单独的控制器调参问题
+## 1. This is not a single controller-tuning problem
 
-RViz 中橙色 `/pct_path` 是 PCT 的全局路线，绿色 `/quad_0/path` 是机器人实际
-轨迹。旧实现中绿色轨迹会明显切离橙色路线，而且走完第一个局部段后可能停止。
-这里实际包含三个问题：
+In RViz, the orange `/pct_path` is PCT's global route and the green `/quad_0/path` is the robot's actual trajectory. In the old implementation the green trajectory cut away from the orange route, and it could stop after the first local segment. Three separate problems were involved:
 
-1. 整条跨层路线经过全局 minimum-snap 拟合后发生严重过冲；
-2. 状态机把“局部 B-spline 结束”误当成“全局导航结束”；
-3. 平面闭环仿真只更新 x、y、yaw，本身不可能改变 z。
+1. A global minimum-snap fit of the whole multi-floor route overshot badly.
+2. The state machine treated "the local B-spline ended" as "global navigation ended".
+3. The planar closed-loop simulation updates only x, y, and yaw, so it cannot change z.
 
-## 2. 全局参考负责守住走廊，局部轨迹负责平滑
+## 2. The global reference holds the corridor; the local trajectory does the smoothing
 
-旧实现会对完整跨层路线做一次全局拟合。弯道较急或楼层连接较近时，拟合曲线可能
-离开原始折线。机器人看起来像在跨墙或绕开楼梯，问题其实出在局部规划器收到的
-全局参考已经偏离 PCT 走廊。
+The old implementation fit the whole multi-floor route once. On a sharp bend, or where floors connect closely, the fitted curve could leave the original polyline. The robot looked as if it were crossing a wall or walking around the stairs. The local planner had already received a global reference that had left the PCT corridor.
 
-当前实现把职责拆开：
+The current implementation splits those jobs:
 
 ```text
-PCT 折线 ──RDP(0.10 m)──> 三维关键点
+PCT polyline ──RDP(0.10 m)──> 3D keypoints
                               │
-                              ├─ 分段线性全局参考：不抄近路
+                              ├─ piecewise-linear global reference: no shortcuts
                               │
-                              └─ 局部窗口：SCAN B-spline 平滑与避障
+                              └─ local window: SCAN B-spline smoothing and avoidance
 ```
 
-分段线性并不意味着机器人动作是折线。它只定义全局“导航走廊中心线”；真正发布给
-执行器的仍是 SCAN 优化后的三次 B-spline。Building 默认使用 `0.8 m` 的短窗口，
-减少楼梯和转角处的局部捷径。
+Piecewise linear does not mean the robot moves in a polyline. It only defines the centerline of the global navigation corridor. What is actually published to the executor is still the cubic B-spline optimized by SCAN. Building uses a short `0.8 m` window by default, which reduces local shortcuts on stairs and corners.
 
-## 3. 局部完成不等于全局完成
+## 3. Finishing a local segment is not finishing the global route
 
-每条 SCAN B-spline 只走大约一个 planning horizon。状态机现在检查全局参考的
-`last_progress_time_`：
+Each SCAN B-spline covers about one planning horizon. The state machine now checks `last_progress_time_` on the global reference:
 
-- 尚未到全局末端：从 `EXEC_TRAJ` 转到 `REPLAN_TRAJ`，继续生成下一窗口；
-- 已到全局末端：清除目标并进入 `WAIT_TARGET`。
+- Not yet at the global end: switch from `EXEC_TRAJ` to `REPLAN_TRAJ` and generate the next window.
+- At the global end: clear the goal and enter `WAIT_TARGET`.
 
-无界面联调会持续收到递增的 trajectory 编号。编号停在 1，通常表示状态机没有从
-局部完成状态继续进入 `REPLAN_TRAJ`。
+A headless run keeps receiving increasing trajectory numbers. If the number stays at 1, the state machine usually did not leave the local-complete state and enter `REPLAN_TRAJ`.
 
-## 4. 为什么跨层演示使用 open-loop
+## 4. Why the multi-floor demo uses open-loop
 
-这里的 `open_loop` 是演示专用的三维轨迹执行器：它直接采样
-`planning/bspline`，发布 x、y、z 和由速度方向得到的 yaw。`closed_loop` 则通过
-平面 `cmd_vel` 驱动简化运动学模型，只适合二维演示。
+`open_loop` here is a 3D trajectory executor for the demo. It samples `planning/bspline` directly and publishes x, y, z, and a yaw taken from the velocity direction. `closed_loop` drives a simplified kinematic model with a planar `cmd_vel` and is only suitable for a 2D demo.
 
-这不代表真实四足机器人应当开环控制。真机链路仍应是：SCAN 期望运动 → 速度或
-足端命令 → MoE 低层 policy → 关节执行与状态反馈。本项目当前目标是视频展示，
-所以论文场景启动器默认使用三维 `open_loop`。
+This does not mean a real quadruped should be controlled open-loop. On a real robot the chain should still be: SCAN desired motion → velocity or foot commands → MoE low-level policy → joint execution and state feedback. The current goal of this project is a video, so the paper-scene launcher uses 3D `open_loop` by default.
 
-## 5. 验证 Building 跨层跟踪
+## 5. Check Building multi-floor tracking
 
-先运行 PCT A* 测试：
+Run the PCT A* test first:
 
 ```bash
 ./scripts/test_pct_building_astar.sh --force
 ```
 
-测试通过后自动播放默认路线：
+After it passes, play the default route automatically:
 
 ```bash
 ./scripts/launch_pct_scan_building.sh plan_on_startup:=true
 ```
 
-另开终端观察机身高度：
+Watch the body height in another terminal:
 
 ```bash
 source /opt/ros/humble/setup.bash
@@ -73,6 +61,4 @@ source install/setup.bash
 ros2 topic echo /quad_0/body_pose --field pose.pose.position.z
 ```
 
-日志应持续出现递增的 `Received trajectory N`，而不是 trajectory 1 后进入
-`WAIT_TARGET`。RViz 中橙色是 PCT 全局路线，绿色是机器人历史轨迹。机器人进入
-楼梯后，`/quad_0/body_pose` 的 z 应随局部轨迹变化。
+The log should keep printing an increasing `Received trajectory N`, rather than entering `WAIT_TARGET` after trajectory 1. In RViz, orange is the PCT global route and green is the robot's history. After the robot enters the stairs, z of `/quad_0/body_pose` should follow the local trajectory.

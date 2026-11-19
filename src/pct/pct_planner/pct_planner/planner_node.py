@@ -202,14 +202,14 @@ class PCTPlanner(Node):
         elif scene_key == 'rmuc':
             self.tomo_file = 'rmuc_2024'
 
-            # rmuc_2024 的 tomography 日志：
+            # rmuc_2024 tomography log:
             # Map center: [-6.81, -3.38]
             # Dim_x: 301, Dim_y: 331, resolution: 0.10
-            # 估算地图范围大约：
+            # Estimated map extent:
             # x: -21.86 ~ 8.24
             # y: -19.93 ~ 13.17
             #
-            # 这里先给一组保守的初始点，后续你可以在 RViz 里拖 marker。
+            # Conservative initial points; drag the markers in RViz later.
             self.start_pos = np.array([-6.0, -4.0, 0.0], dtype=np.float32)
             self.end_pos = np.array([-2.0, -4.0, 0.0], dtype=np.float32)
         elif scene_key in ('multifloor', 'custom'):

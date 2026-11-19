@@ -76,7 +76,7 @@ void Spline1dKernel::AddNthDerivativekernelMatrix(const uint32_t n,
   }
 }
 
-// 计算sum_{t==0}^{x} {f'(t) * f'(t)}, 用以最小化导数平方
+// Compute sum_{t==0}^{x} {f'(t) * f'(t)} to minimize the sum of squared derivatives
 void Spline1dKernel::AddDerivativeKernelMatrix(const double weight) {
   AddNthDerivativekernelMatrix(1, weight);
 }
@@ -90,7 +90,7 @@ void Spline1dKernel::AddThirdOrderDerivativeMatrix(const double weight) {
 }
 
 /*
-  计算[spline(t) - ref_fx]的最小二次型
+  Least-squares form of [spline(t) - ref_fx]
 */
 bool Spline1dKernel::AddReferenceLineKernelMatrix(
     const std::vector<double>& x_coord, const std::vector<double>& ref_fx,
