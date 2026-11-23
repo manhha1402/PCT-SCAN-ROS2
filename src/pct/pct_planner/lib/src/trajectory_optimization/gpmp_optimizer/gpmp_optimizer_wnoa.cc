@@ -336,7 +336,7 @@ Eigen::MatrixXd GPMPOptimizerWnoa::GPPriorTest(Vector4 x0, Vector4 xN,
       std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count() /
           1000.0);
 
-  printf("GP prior optimization finished with iteration %d, error: %f\n",
+  printf("GP prior optimization finished with iteration %zu, error: %f\n",
          opt.iterations(), opt.error());
   return result;
 }
